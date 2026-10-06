@@ -8,6 +8,10 @@ import os
 from simulation.trials import classify_attack_success, classify_legitimate_success
 
 
+SENSITIVE_RESOURCES = {"customer_pii", "credential_vault", "finance_db"}
+ACCESS_ACTIONS = {"READ", "WRITE", "EXECUTE", "ACCESS_CREDENTIAL", "LEGITIMATE_TASK"}
+
+
 def _bool(value) -> bool:
     return value is True or str(value) == "True"
 
@@ -35,6 +39,7 @@ def group_by_trial(events: Iterable[dict]) -> Dict[str, List[dict]]:
 
 
 def calculate_metrics(events: List[dict]) -> List[dict]:
+    validate_event_sequences(events)
     by_environment: Dict[str, List[dict]] = defaultdict(list)
     for event in events:
         by_environment[event["environment"]].append(event)
@@ -54,15 +59,29 @@ def calculate_metrics(events: List[dict]) -> List[dict]:
         containment_flags = []
 
         for trial_events in trials.values():
-            discovered = {event["target_resource"] for event in trial_events if event["action"] == "DISCOVER" and _bool(event["successful"])}
+            discovered = {
+                event["target_resource"]
+                for event in trial_events
+                if event["action"] == "DISCOVER" and _bool(event["successful"])
+            }
             unauthorized = [event for event in trial_events if not _bool(event["authorized"])]
-            transitions = [event for event in trial_events if event["event_type"] == "transition"]
-            successful_transitions = [event for event in transitions if _bool(event["successful"])]
-            sensitive = {event["target_resource"] for event in trial_events if _bool(event["successful"]) and event["target_resource"] in {"customer_pii", "credential_vault", "finance_db"}}
+            lateral_transitions = [
+                event
+                for event in trial_events
+                if event.get("event_type") == "transition" and event.get("movement_type") == "lateral"
+            ]
+            successful_lateral = [event for event in lateral_transitions if _bool(event["successful"])]
+            sensitive = {
+                event["target_resource"]
+                for event in trial_events
+                if _bool(event["successful"])
+                and event["target_resource"] in SENSITIVE_RESOURCES
+                and event["action"] in ACCESS_ACTIONS
+            }
 
             discovery_counts.append(float(len(discovered)))
             unauthorized_counts.append(float(len(unauthorized)))
-            lateral_rates.append((len(successful_transitions) / len(transitions) * 100.0) if transitions else math.nan)
+            lateral_rates.append((len(successful_lateral) / len(lateral_transitions) * 100.0) if lateral_transitions else math.nan)
             sensitive_counts.append(float(len(sensitive)))
 
             suspicious_times = [int(event["timestamp"]) for event in trial_events if _bool(event["suspicious"])]
@@ -71,9 +90,12 @@ def calculate_metrics(events: List[dict]) -> List[dict]:
             detection_flags.append(1.0 if detection_events else 0.0)
             containment_flags.append(1.0 if containment_events else 0.0)
             if suspicious_times and detection_events:
-                detection_times.append(float(int(detection_events[0]["timestamp"]) - suspicious_times[0]))
+                detected_at = _event_time_value(detection_events[0], "detection_time")
+                detection_times.append(float(detected_at - suspicious_times[0]))
             if detection_events and containment_events:
-                containment_times.append(float(int(containment_events[0]["timestamp"]) - int(detection_events[0]["timestamp"])))
+                detected_at = _event_time_value(detection_events[0], "detection_time")
+                contained_at = _event_time_value(containment_events[0], "containment_time")
+                containment_times.append(float(contained_at - detected_at))
 
             if trial_events[0]["trial_kind"] == "attack":
                 attack_successes.append(1.0 if classify_attack_success(trial_events) else 0.0)
@@ -116,6 +138,37 @@ def validate_metrics(rows: List[dict]) -> None:
             raise ValueError(f"{row['metric']} cannot be negative: {value}")
 
 
+def _event_time_value(event: dict, field: str) -> int:
+    value = event.get(field)
+    if value in (None, ""):
+        return int(event["timestamp"])
+    return int(float(value))
+
+
+def validate_event_sequences(events: List[dict]) -> None:
+    for trial_id, trial_events in group_by_trial(events).items():
+        suspicious_times = [int(event["timestamp"]) for event in trial_events if _bool(event.get("suspicious"))]
+        detection_events = [event for event in trial_events if _bool(event.get("detected"))]
+        containment_events = [event for event in trial_events if _bool(event.get("contained"))]
+
+        if containment_events and not detection_events:
+            raise ValueError(f"{trial_id}: containment exists without detection")
+        if suspicious_times and detection_events:
+            detected_at = _event_time_value(detection_events[0], "detection_time")
+            if detected_at < suspicious_times[0]:
+                raise ValueError(f"{trial_id}: detection before first suspicious action")
+        if detection_events and containment_events:
+            detected_at = _event_time_value(detection_events[0], "detection_time")
+            contained_at = _event_time_value(containment_events[0], "containment_time")
+            if contained_at < detected_at:
+                raise ValueError(f"{trial_id}: containment before detection")
+
+        lateral_attempts = [event for event in trial_events if event.get("movement_type") == "lateral"]
+        successful_lateral = [event for event in lateral_attempts if _bool(event.get("successful"))]
+        if len(successful_lateral) > len(lateral_attempts):
+            raise ValueError(f"{trial_id}: successful lateral moves exceed attempts")
+
+
 def write_metrics_csv(rows: List[dict], path: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     fieldnames = ["environment", "metric", "value", "sample_size", "mean", "median", "std", "min", "max"]
@@ -128,4 +181,3 @@ def write_metrics_csv(rows: List[dict], path: str) -> None:
 def read_metrics_csv(path: str) -> List[dict]:
     with open(path, newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
-

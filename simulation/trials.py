@@ -15,6 +15,7 @@ from simulation.events import Event
 
 
 ATTACK_SUCCESS_RESOURCE = "customer_pii"
+ATTACK_SUCCESS_ACTIONS = {"READ", "WRITE", "EXECUTE"}
 
 
 def initial_credentials(profile: AgentProfile, credentials: Dict[str, Credential]) -> List[Credential]:
@@ -26,6 +27,29 @@ def initial_credentials(profile: AgentProfile, credentials: Dict[str, Credential
         "service_bot": ["svc_app", "svc_db"],
     }
     return [credentials[item] for item in mapping.get(profile.profile_id, []) if item in credentials]
+
+
+def initial_visible_resources(environment: str, profile: AgentProfile, resources: Dict[str, Resource]) -> Set[str]:
+    if environment == "baseline":
+        visible = {rid for rid, resource in resources.items() if resource.discoverable}
+        visible.update({"internal_api", "ops_runbooks"})
+    else:
+        visible = {"public_docs"}
+        if profile.profile_id == "service_bot":
+            visible.add("app_service")
+        if profile.profile_id == "admin":
+            visible.add("admin_console")
+    return {rid for rid in visible if rid in resources}
+
+
+def detection_delay_for(environment: str, config: ExperimentConfig) -> int:
+    return config.baseline_detection_delay_steps if environment == "baseline" else config.protected_detection_delay_steps
+
+
+def movement_type_for(trial_kind: str, source_zone: str, target_zone: str) -> str:
+    if source_zone == target_zone:
+        return "none"
+    return "lateral" if trial_kind == "attack" else "legitimate"
 
 
 def run_environment_trials(environment: str, config: ExperimentConfig) -> List[Event]:
@@ -58,8 +82,8 @@ def run_single_trial(
     credentials = build_credentials(environment)
     held_credentials = initial_credentials(profile, credentials)
     decision_engine = DecisionEngine(rng)
-    detection_engine = DetectionEngine(environment)
-    containment_engine = ContainmentEngine(environment)
+    detection_engine = DetectionEngine(environment, detection_delay_for(environment, config))
+    containment_engine = ContainmentEngine(environment, config.protected_containment_delay_steps)
     detection_state = DetectionState()
     containment_state = ContainmentState()
 
@@ -67,20 +91,24 @@ def run_single_trial(
     if profile.starting_zone == "admin":
         current_resource = "admin_console"
     current_zone = profile.starting_zone
-    discovered: Set[str] = {rid for rid, resource in resources.items() if resource.discoverable}
+    visible_resources = initial_visible_resources(environment, profile, resources)
+    discovered_resources: Set[str] = set()
     trial_events: List[Event] = []
 
     for timestamp in range(1, config.max_steps + 1):
         if containment_state.contained:
             break
 
-        action, target = decision_engine.choose_action(profile, trial_kind, environment, current_zone, resources, discovered)
+        known_resources = visible_resources | discovered_resources
+        action, target = decision_engine.choose_action(profile, trial_kind, environment, current_zone, resources, known_resources)
         source_resource = current_resource
         source_zone = current_zone
         event_type = "action"
+        movement_type = "none"
         reason = ""
         authorized = False
         successful = False
+        security_control = ""
 
         if action == Action.MOVE:
             segment = evaluate_transition(environment, current_zone, target)
@@ -88,21 +116,29 @@ def run_single_trial(
             successful = segment.allowed
             reason = segment.reason
             event_type = "transition"
+            movement_type = movement_type_for(trial_kind, source_zone, target.network_zone)
+            security_control = "segmentation"
             if successful:
                 current_zone = target.network_zone
                 current_resource = target.resource_id
-                discovered.add(target.resource_id)
+                visible_resources.add(target.resource_id)
         else:
             permission = evaluate_permission(environment, action, profile, target, held_credentials)
             authorized = permission.authorized
             blocked = permission.blocked
             successful = authorized and not blocked
             reason = permission.reason
-            if action == Action.DISCOVER and (successful or environment == "baseline"):
-                discovered.add(target.resource_id)
+            security_control = "permissions"
+            if action == Action.DISCOVER and successful:
+                if target.resource_id not in visible_resources and target.resource_id not in discovered_resources:
+                    reason = "new_resource_discovered"
+                else:
+                    reason = "resource_already_known"
+                discovered_resources.add(target.resource_id)
+                visible_resources.add(target.resource_id)
                 successful = True
             if action == Action.REQUEST_RESOURCE and successful:
-                discovered.add(target.resource_id)
+                visible_resources.add(target.resource_id)
             if action == Action.ACCESS_CREDENTIAL and successful:
                 gained = credentials.get(target.required_credential)
                 if gained and (environment == "baseline" or not gained.isolated or profile.role == gained.role):
@@ -118,9 +154,10 @@ def run_single_trial(
             authorized,
             successful,
             source_zone,
+            movement_type,
         )
-        containment_state = containment_engine.apply(containment_state, timestamp, detection_state.detected)
-        suspicious = detection_state.first_suspicious_time == timestamp or (not authorized) or (successful and is_sensitive(target))
+        containment_state = containment_engine.apply(containment_state, timestamp, detection_state.detection_time)
+        suspicious = detection_state.last_event_suspicious
 
         trial_events.append(
             Event(
@@ -140,11 +177,20 @@ def run_single_trial(
                 detected=detection_state.detected,
                 contained=containment_state.contained,
                 event_type=event_type,
+                movement_type=movement_type,
                 reason=reason,
+                detection_time=detection_state.detection_time,
+                containment_time=containment_state.containment_time,
+                security_control=security_control,
             )
         )
 
-        if trial_kind == "attack" and target.resource_id == ATTACK_SUCCESS_RESOURCE and successful:
+        if (
+            trial_kind == "attack"
+            and action.value in ATTACK_SUCCESS_ACTIONS
+            and target.resource_id == ATTACK_SUCCESS_RESOURCE
+            and successful
+        ):
             break
         if trial_kind == "legitimate" and action == Action.LEGITIMATE_TASK and successful:
             break
@@ -156,6 +202,7 @@ def classify_attack_success(events: List[dict]) -> bool:
     return any(
         event["trial_kind"] == "attack"
         and event["target_resource"] == ATTACK_SUCCESS_RESOURCE
+        and event["action"] in ATTACK_SUCCESS_ACTIONS
         and str(event["successful"]) == "True"
         for event in events
     )

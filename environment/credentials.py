@@ -15,7 +15,7 @@ class Credential:
 def build_credentials(environment: str) -> Dict[str, Credential]:
     baseline = environment == "baseline"
     credentials = [
-        Credential("employee_basic", "employee", "employee", "broad" if baseline else "user", ["public_docs", "hr_portal", "employee_records"] if baseline else ["public_docs", "hr_portal"], not baseline),
+        Credential("employee_basic", "employee", "employee", "broad" if baseline else "user", ["public_docs", "hr_portal", "employee_records", "customer_pii"] if baseline else ["public_docs", "hr_portal"], not baseline),
         Credential("hr_read", "hr", "employee", "department", ["employee_records", "hr_portal"], not baseline),
         Credential("svc_app", "service_bot", "service", "service" if not baseline else "broad", ["app_service", "internal_api", "orders_db"] if not baseline else ["app_service", "internal_api", "orders_db", "finance_db"], not baseline),
         Credential("svc_db", "service_bot", "service", "database", ["orders_db"], not baseline),
@@ -26,4 +26,3 @@ def build_credentials(environment: str) -> Dict[str, Credential]:
         Credential("pii_access", "security", "security", "sensitive", ["customer_pii"], not baseline),
     ]
     return {credential.credential_id: credential for credential in credentials}
-

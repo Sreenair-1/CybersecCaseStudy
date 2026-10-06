@@ -22,7 +22,11 @@ class Event:
     detected: bool
     contained: bool
     event_type: str
+    movement_type: str
     reason: str
+    detection_time: int | None = None
+    containment_time: int | None = None
+    security_control: str = ""
 
 
 FIELDNAMES = list(Event.__dataclass_fields__.keys())
@@ -40,4 +44,3 @@ def write_events_csv(events: Iterable[Event], path: str) -> None:
 def read_events_csv(path: str) -> List[dict]:
     with open(path, newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
-

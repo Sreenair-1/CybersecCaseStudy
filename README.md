@@ -25,7 +25,7 @@ The code follows the requested module layout:
 
 ## Environment Models
 
-Baseline uses broader credentials, weak segmentation, greater discoverability, and delayed detection. Protected uses least privilege, isolated credentials, strict zone transitions, immediate blocking for policy violations, stronger detection, and containment.
+Baseline uses broader credentials, weak segmentation, greater initial resource visibility, and slower detection. Protected uses least privilege, isolated credentials, restricted initial visibility, strict zone transitions, policy enforcement, faster detection, and delayed containment.
 
 ## Agent Model
 
@@ -33,12 +33,12 @@ Five profiles are implemented: normal employee, privileged administrator, curiou
 
 ## Metric Definitions
 
-- M1: unique resources discovered per trial.
-- M2: unauthorized actions per trial.
-- M3: successful transition attempts divided by total transition attempts.
-- M4: unique sensitive resources successfully exposed per trial.
-- M5: detection timestamp minus first suspicious timestamp.
-- M6: containment timestamp minus detection timestamp.
+- M1: unique resources actively discovered per trial. Initial visibility is not counted as discovery.
+- M2: unauthorized action attempts per trial.
+- M3: successful adversarial lateral-movement attempts divided by total adversarial lateral-movement attempts. Legitimate movement is excluded.
+- M4: unique sensitive resources successfully exposed per trial. Attempted or blocked access is not exposure.
+- M5: simulated detection timestamp minus first suspicious action timestamp.
+- M6: simulated containment timestamp minus detection timestamp.
 - M7: attack trials that successfully access `customer_pii`.
 - M8: legitimate trials that complete a `LEGITIMATE_TASK`.
 
@@ -46,7 +46,7 @@ Missing detection and containment times remain missing rather than being replace
 
 ## Trial Methodology
 
-By default, each environment runs 100 attack trials and 100 legitimate trials with seed `42`. The same seed and configuration produce the same `events.csv`, `metrics.csv`, and figures.
+By default, each environment runs 100 attack trials and 100 legitimate trials with seed `42`. The same seed and configuration produce the same `events.csv`, `metrics.csv`, `comparison.csv`, and figures. Detection and containment delays are experimental inputs, not measured outputs chosen after the run.
 
 ## Run
 
@@ -58,6 +58,12 @@ Optional arguments:
 
 ```bash
 python run_experiment.py --seed 42 --attack-trials 100 --legitimate-trials 100 --max-steps 18
+```
+
+Delay parameters can also be changed:
+
+```bash
+python run_experiment.py --baseline-detection-delay 4 --protected-detection-delay 2 --containment-delay 2
 ```
 
 ## Outputs

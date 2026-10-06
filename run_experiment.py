@@ -17,6 +17,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--attack-trials", type=int, default=100)
     parser.add_argument("--legitimate-trials", type=int, default=100)
     parser.add_argument("--max-steps", type=int, default=18)
+    parser.add_argument("--baseline-detection-delay", type=int, default=4)
+    parser.add_argument("--protected-detection-delay", type=int, default=2)
+    parser.add_argument("--containment-delay", type=int, default=2)
     parser.add_argument("--output-dir", default="output")
     return parser.parse_args()
 
@@ -38,6 +41,9 @@ def main() -> None:
         attack_trials_per_environment=args.attack_trials,
         legitimate_trials_per_environment=args.legitimate_trials,
         max_steps=args.max_steps,
+        baseline_detection_delay_steps=args.baseline_detection_delay,
+        protected_detection_delay_steps=args.protected_detection_delay,
+        protected_containment_delay_steps=args.containment_delay,
         output_dir=args.output_dir,
     )
     events = run_baseline(config) + run_protected(config)
@@ -72,9 +78,15 @@ def main() -> None:
     print("Cybersecurity Agent Simulation")
     print("==============================")
     print()
+    print("Configuration")
+    print("-------------")
     print(f"Seed: {config.seed}")
     print(f"Attack trials/environment: {config.attack_trials_per_environment}")
     print(f"Legitimate trials/environment: {config.legitimate_trials_per_environment}")
+    print(f"Maximum steps: {config.max_steps}")
+    print(f"Baseline detection delay: {config.baseline_detection_delay_steps}")
+    print(f"Protected detection delay: {config.protected_detection_delay_steps}")
+    print(f"Containment delay: {config.protected_containment_delay_steps}")
     for environment, title in [("baseline", "Environment A - Baseline"), ("protected", "Environment B - Protected")]:
         print()
         print(title)
@@ -83,6 +95,9 @@ def main() -> None:
             row = by_env_metric[(environment, metric)]
             suffix = "%" if "percent" in metric else ""
             print(f"{label}: {format_value(row['mean'])}{suffix}")
+        print()
+        print(f"Detection Rate: {format_value(by_env_metric[(environment, 'detection_rate_percent')]['mean'])}%")
+        print(f"Containment Rate: {format_value(by_env_metric[(environment, 'containment_rate_percent')]['mean'])}%")
     print()
     print("Comparison")
     print("----------")
@@ -94,7 +109,8 @@ def main() -> None:
                 f"{format_value(comparison['percentage_change'])}%"
             )
     print()
-    print("Output:")
+    print("Output")
+    print("------")
     print(events_path)
     print(metrics_path)
     print(comparison_path)
