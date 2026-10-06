@@ -1,6 +1,0 @@
-simulation_stage,mitre_tactic,mitre_technique,simulation_actions,note
-Resource Discovery,Discovery,T1087/T1083-style discovery abstraction,"DISCOVER, REQUEST_RESOURCE",Synthetic enumeration of simulated resources only.
-Credential Attempt,Credential Access,Credential store access abstraction,ACCESS_CREDENTIAL,Uses fake credential objects; no real credential collection occurs.
-Unauthorized Access,Defense Evasion / Privilege Abuse,Policy violation abstraction,"READ, WRITE, EXECUTE, REQUEST_RESOURCE",Represents permission violations in the synthetic policy engine.
-Lateral Movement,Lateral Movement,Remote service movement abstraction,MOVE,Synthetic zone transitions evaluated by segmentation policy.
-Sensitive Resource Access,Collection / Exfiltration Impact Proxy,Sensitive data access abstraction,"READ, WRITE, EXECUTE",Counts successful access to synthetic sensitive resources; no data leaves the simulation.
