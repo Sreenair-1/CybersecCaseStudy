@@ -1,12 +1,3 @@
-"""MITRE ATT&CK Mapping for Incident-Grounded Simulation.
-
-Maps documented incident characteristics to simulation behaviors and MITRE ATT&CK techniques.
-Each mapping is explicitly labeled with its analytical evidence status:
-- 'incident-supported': Documented in public incident disclosures.
-- 'analytical/inferred': Plausible technique inferred from attacker outcomes.
-- 'simulation-only': Modeling abstraction used for synthetic experimentation.
-"""
-
 from typing import Dict, List
 
 
@@ -66,4 +57,3 @@ MITRE_MAPPING: List[Dict[str, str]] = [
         "note": "Simulated behavioral threshold and automated containment delay engine.",
     },
 ]
-

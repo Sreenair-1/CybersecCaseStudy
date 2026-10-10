@@ -14,10 +14,6 @@ from security.segmentation import evaluate_transition
 from simulation.events import Event
 
 
-# ATTACK OBJECTIVE NOTE:
-# 'customer_pii' is a synthetic modeling abstraction representing high-value
-# sensitive platform assets (e.g., proprietary model weights, benchmark ground-truth,
-# token stores), NOT a claim that the July 2026 incident involved an actual customer PII database.
 ATTACK_SUCCESS_RESOURCE = "customer_pii"
 ATTACK_SUCCESS_ACTIONS = {"READ", "WRITE", "EXECUTE"}
 
@@ -30,7 +26,6 @@ def map_incident_phase(
     successful: bool,
     contained: bool,
 ) -> str:
-    """Deterministically map an event to its corresponding incident lifecycle phase."""
     if contained:
         return "containment"
     if trial_kind == "legitimate":

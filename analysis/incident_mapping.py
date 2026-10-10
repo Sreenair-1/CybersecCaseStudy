@@ -1,12 +1,3 @@
-"""Incident-to-Simulation Mapping for the July 2026 Hugging Face Incident.
-
-Defines a structured, evidence-backed mapping between:
-1. Real-world incident characteristics (documented from public disclosures).
-2. Synthetic simulation abstractions (in-memory entities and probabilistic behavior).
-3. Security controls being evaluated (least privilege, isolation, segmentation, detection, containment).
-4. Metrics affected (M1 through M8).
-"""
-
 from typing import Dict, List
 import csv
 import os
@@ -81,12 +72,10 @@ INCIDENT_MAPPINGS: List[Dict[str, str]] = [
 
 
 def get_incident_mappings() -> List[Dict[str, str]]:
-    """Return a copy of all incident-to-simulation mapping records."""
     return [dict(mapping) for mapping in INCIDENT_MAPPINGS]
 
 
 def write_incident_mapping_csv(path: str) -> None:
-    """Write incident mappings to a CSV file."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     fieldnames = [
         "incident_characteristic",

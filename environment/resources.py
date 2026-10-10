@@ -1,15 +1,3 @@
-"""Synthetic resource abstractions for the incident-grounded simulation.
-
-IMPORTANT SCIENTIFIC INTEGRITY NOTE:
-These resources represent SYNTHETIC MODELING ABSTRACTIONS of asset classes
-relevant to the July 2026 Hugging Face incident (public documentation,
-application services, internal APIs, credential vaults, databases,
-source repositories, and sensitive data).
-
-They are NOT claims that Hugging Face had exactly these resources configured
-in exactly this topology or naming convention.
-"""
-
 from dataclasses import dataclass
 from typing import Dict
 
@@ -27,7 +15,6 @@ class Resource:
 
 
 def build_resources() -> Dict[str, Resource]:
-    """Instantiate synthetic resource classes for the simulation."""
     resources = [
         Resource("public_docs", "public", 1, "communications", "public", "employee", "employee_basic", True),
         Resource("hr_portal", "application", 2, "hr", "application", "employee", "employee_basic", True),
@@ -46,6 +33,6 @@ def build_resources() -> Dict[str, Resource]:
 
 
 def is_sensitive(resource: Resource) -> bool:
-    """Determine whether a resource is considered sensitive within the threat model."""
     return resource.sensitivity >= 5 or resource.resource_type == "sensitive"
+
 

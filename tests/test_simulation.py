@@ -405,7 +405,6 @@ def test_synthetic_resources_abstraction_integrity():
     assert "customer_pii" in resources
     assert "credential_vault" in resources
     assert "public_docs" in resources
-    # Ensure all resources belong to valid discrete zones
     valid_zones = {"public", "application", "internal", "database", "sensitive", "admin"}
     for res in resources.values():
         assert res.network_zone in valid_zones
@@ -413,7 +412,6 @@ def test_synthetic_resources_abstraction_integrity():
 
 
 def test_no_external_network_or_process_interaction():
-    # Verify execution requires only local pure Python objects
     config = ExperimentConfig(seed=42, attack_trials_per_environment=2, legitimate_trials_per_environment=2, max_steps=6)
     events = run_single_trial("protected", "attack", "test-trial", build_agent_profiles()["compromised"], config, random.Random(42))
     assert len(events) > 0

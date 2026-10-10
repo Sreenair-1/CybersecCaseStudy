@@ -1,15 +1,3 @@
-"""Synthetic Agent Profiles for Incident-Grounded Simulation.
-
-Profiles represent identities/roles relevant to the July 2026 Hugging Face threat model:
-- 'compromised': Primary adversarial autonomous agent model (analogous to the escaped
-                eval agent exhibiting high risk tolerance, exploratory discovery,
-                and credential harvesting).
-- 'curious': Lower-capability exploratory / overreaching identity modeling policy misuse.
-- 'employee', 'admin', 'service_bot': Legitimate operational profiles used to measure
-                                      collateral impact, policy false positives, and
-                                      legitimate task availability (M8).
-"""
-
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -28,7 +16,6 @@ class AgentProfile:
 
 
 def build_agent_profiles() -> Dict[str, AgentProfile]:
-    """Construct the five synthetic agent profiles for the simulation."""
     return {
         "employee": AgentProfile(
             "employee",
