@@ -2,6 +2,9 @@
 
 A synthetic, incident-grounded cybersecurity simulation framework that models the attack lifecycle of autonomous AI agents escaping sandboxes and evaluates the efficacy of Zero Trust Architecture (ZTA) defensive controls (least privilege visibility, credential isolation, network zone segmentation, and automated anomaly containment).
 
+## Repo Link
+https://github.com/Sreenair-1/CybersecCaseStudy
+
 ---
 
 ## How to Execute
