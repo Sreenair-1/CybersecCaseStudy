@@ -14,7 +14,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run the Simulation Experiment
-Execute the full deterministic simulation pipeline:
+Execute the full simulation pipeline:
 
 ```bash
 python run_experiment.py
@@ -42,4 +42,4 @@ Running the experiment produces generated artifacts in the `output/` directory:
 - `output/metrics.csv`: Aggregated summary statistics for evaluation metrics (M1–M8).
 - `output/comparison.csv`: Baseline vs. Protected environment comparative analysis.
 - `output/incident_mapping.csv`: Mappings between real-world incident stages and synthetic actions.
-- `output/figures/`: Publication-quality metric visualization plots and attack graph diagrams.
+- `output/figures/`: Visualization plots and attack graph diagrams.

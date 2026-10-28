@@ -1,11 +1,24 @@
-/.venv
+# Local Python environments
+.venv/
+venv/
+env/
+
+# Python bytecode and test/tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# PyInstaller build outputs
+/build/
+/dist/
+/simulation.spec
+
+# Local documents and one-off files
 /MyJob.docx
 /MyJob.pdf
 /package_person3.py
-/pytest-cache-files-229pncw3
-/pytest-cache-files-8duyqkdm
-/pytest-cache-files-igxjm9tf
-__pycache__
-*/__pycache__/
 /P
 /docs
+/pytest-cache-files-*/
